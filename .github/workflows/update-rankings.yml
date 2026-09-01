@@ -1,0 +1,82 @@
+name: Update rankings
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "cfbrank/**"
+      - "config.yaml"
+      - "requirements.txt"
+      - ".github/workflows/update-rankings.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore API cache
+        uses: actions/cache@v4
+        with:
+          path: data/raw
+          key: cfbd-raw-${{ github.run_id }}
+          restore-keys: |
+            cfbd-raw-
+
+      - name: Build the site
+        env:
+          CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
+        run: python -m cfbrank --verbose --timeout 180 build
+
+      - name: Show the top 25 in the run log
+        env:
+          CFBD_API_KEY: ${{ secrets.CFBD_API_KEY }}
+        run: python -m cfbrank top -n 25
+
+      - name: Sanity check the output
+        run: |
+          test -s docs/index.html
+          test -s docs/data/rankings.json
+          python - <<'PY'
+          import json
+          data = json.load(open("docs/data/rankings.json"))
+          n = len(data["rankings"])
+          assert n > 100, f"only {n} teams ranked - something went wrong"
+          print(f"OK: {n} teams, generated {data['generated_at']}")
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
