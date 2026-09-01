@@ -1,12 +1,25 @@
-"""AP poll data, and week-by-week comparison against the Elo ratings.
+"""COMPARING THE MODEL AGAINST THE HUMANS.
 
-The interesting question about any rating system isn't whether it agrees with
-the humans - it's *where* it disagrees, and whether those disagreements were
-right. This module lines the two up week by week so you can look.
+Downloads the AP Top 25 - the poll voted on by sportswriters each week - and
+lines it up against what this model said at the same moment.
 
-Timing matters and is easy to get wrong. The AP poll released during week N
-reflects games played through week N-1, so it is compared against the Elo
-ratings as they stood after week N-1. That's the ``offset`` below.
+The interesting question isn't whether a rating system agrees with the voters.
+It's WHERE it disagrees, and which side turned out to be right. So the output
+focuses on that: how many of the same 25 teams appear, how far apart they rank
+the teams they share, and the teams the two argued about all season.
+
+ONE SUBTLETY THAT'S EASY TO GET WRONG
+-------------------------------------
+The AP poll published during week 6 is voted on after week 5's games. So
+comparing it against this model's week 6 ratings would be unfair - it would
+credit the voters with knowing results they hadn't seen yet.
+
+Instead, week 6's poll is compared against the ratings as they stood after
+week 5: the same evidence the voters actually had. That one-week shift is the
+`offset` parameter, and it defaults to 1.
+
+(Setting offset to 0 asks a different and also interesting question: how well
+did the voters predict the week that followed?)
 """
 
 from __future__ import annotations
@@ -116,10 +129,20 @@ def ap_polls(polls: Iterable[Poll]) -> list[Poll]:
 
 @dataclass
 class Disagreement:
+    """One team the two systems ranked differently.
+
+    `gap` is the AP's rank minus this model's rank. Because lower rank numbers
+    are better, a POSITIVE gap means this model rates the team higher than the
+    voters do:
+
+        AP #23, Elo #4  ->  gap +19, "Elo higher"
+        AP #4, Elo #20  ->  gap -16, "AP higher"
+    """
+
     school: str
-    ap_rank: int | None
+    ap_rank: int | None    # None if the AP left them unranked entirely
     elo_rank: int
-    gap: int  # positive = Elo likes the team more than the AP does
+    gap: int
 
     @property
     def direction(self) -> str:
@@ -198,8 +221,11 @@ def compare_week(
         Disagreement(school=s, ap_rank=ap_rank[s], elo_rank=elo_rank[s], gap=ap_rank[s] - elo_rank[s])
         for s in common
     ]
-    # Unranked by the AP but inside the Elo top N: treat as a gap off the bottom
-    # of the poll, which is the honest floor rather than a made-up number.
+    # A team in our top 25 that the AP left off entirely has no AP rank to
+    # subtract. Rather than invent one ("they'd probably be about 40th"), we
+    # use 26 - one spot past the bottom of the poll. That UNDERSTATES the
+    # disagreement, which is the right way to be wrong: it never claims more
+    # precision than the poll actually gives us.
     for s in elo_order:
         if s not in ap_rank:
             disagreements.append(
@@ -286,7 +312,18 @@ class SeasonBias:
 def season_biases(
     comparisons: list[WeekComparison], min_weeks: int = 3
 ) -> list[SeasonBias]:
-    """Teams the two systems persistently disagreed about, worst first."""
+    """Find the teams the two systems argued about ALL SEASON, not just once.
+
+    This is the most interesting output of the comparison. A one-week
+    disagreement is noise - somebody had a bad Saturday. A team the model
+    ranked fifteen spots higher than the voters for twelve straight weeks is a
+    real, systematic difference of opinion, and usually has a story behind it
+    (an unbeaten team from a weak conference, or a one-loss team whose loss the
+    voters can't forgive).
+
+    `min_weeks` is what filters the noise out: a team has to appear in at least
+    three weekly comparisons before its average gap counts.
+    """
     per_team: dict[str, list[int]] = {}
     for week in comparisons:
         ap_rank = {s: i + 1 for i, s in enumerate(week.ap_order)}

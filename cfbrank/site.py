@@ -1,4 +1,27 @@
-"""Render the static dashboard that GitHub Pages serves."""
+"""BUILDING THE WEBSITE.
+
+Takes the finished rankings and writes out the actual web pages that GitHub
+Pages serves. The output is completely static - plain HTML, CSS and JavaScript
+files with no server behind them - which is why hosting it is free and it can
+never go down under load.
+
+Nine files come out of here:
+
+    index.html          the rankings table, movers, and projections
+    team.html           one page that renders ANY team, filled in from...
+    data/teams.json     ...this, every team's history, game log and chart
+    methodology.html    the plain-English explanation of the model
+    assets/style.css    all the styling
+    assets/app.js       sorting, filtering, theme toggle, team rendering
+    data/rankings.csv   the ratings as a spreadsheet
+    data/rankings.json  the ratings for other programs to read
+    .nojekyll           tells GitHub not to reprocess our HTML
+
+The one non-obvious piece is line_chart() below: the rating-history chart's
+geometry is calculated here, in Python, and shipped to the browser as a list of
+coordinates. The browser only draws the shape it's handed. Keeping the math on
+this side means it can be tested, which chart code in JavaScript usually isn't.
+"""
 
 from __future__ import annotations
 
@@ -46,15 +69,31 @@ def line_chart(
     pad_bottom: int = 28,
     baseline: float | None = 1500.0,
 ) -> Chart | None:
-    """Build the SVG geometry for a rating-over-time line."""
+    """Work out where to draw each point of a team's rating-history line.
+
+    Converts a list of (week label, rating) pairs into screen coordinates.
+
+    The core idea is two conversions. Ratings might run from 1450 to 1850,
+    while the drawing is 240 pixels tall - so x_at() spreads the weeks evenly
+    across the width, and y_at() maps a rating onto a height. Note that y_at
+    flips the direction: on a screen, y counts DOWNWARD from the top, so a
+    higher rating needs a smaller y.
+    """
+    # A single point isn't a line; there's nothing to draw until week 1 is done.
     if len(history) < 2:
         return None
 
+    # Find the range the line has to cover, and always include the 1500
+    # average line so "above/below average" is visible on every chart.
     values = [v for _, v in history]
     lo, hi = min(values), max(values)
     if baseline is not None:
         lo, hi = min(lo, baseline), max(hi, baseline)
+    # A team whose rating barely moved would otherwise get a wildly zoomed-in
+    # chart where a 3-point wobble looks like a collapse. This floor keeps the
+    # scale honest.
     span = max(hi - lo, 40.0)
+    # Pad 12% above and below so the line never touches the edges.
     lo, hi = lo - span * 0.12, hi + span * 0.12
     span = hi - lo
 

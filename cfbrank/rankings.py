@@ -1,5 +1,20 @@
-"""Turn raw Elo ratings into the things a ranking page actually shows:
-records, strength of schedule, week-over-week movement, resumes, and projections.
+"""TURNING RATINGS INTO A RANKINGS PAGE.
+
+The rating engine (elo.py) produces one number per team and nothing else. That
+number alone doesn't make a web page. This file works out everything else the
+site displays:
+
+    - the ranked order, 1 through 138
+    - each team's win-loss record, overall and in conference
+    - strength of schedule: the average rating of everyone they played
+    - movement: how many places they've climbed or fallen since last week
+    - resume: their best win and worst loss
+    - a game-by-game log showing what each result was worth in rating points
+    - projections for the upcoming week, with win probabilities
+
+None of this changes any ratings. It only reads what elo.py produced and
+reshapes it for display. Everything lands in a RankingTable, which is what the
+website templates and the command line both read from.
 """
 
 from __future__ import annotations
@@ -18,6 +33,15 @@ FCS_LABEL = "FCS opponent"
 
 
 def slugify(name: str) -> str:
+    """Turn a school name into something safe for a web address.
+
+        "Texas A&M"     -> "texas-am"
+        "San Jose State" -> "san-jose-state"
+        "Hawai'i"        -> "hawaii"
+
+    Accents are stripped, punctuation dropped, spaces become hyphens. This is
+    the id each team is looked up by on the team page (team.html?t=texas-am).
+    """
     text = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
     text = re.sub(r"[^\w\s-]", "", text).strip().lower()
     return re.sub(r"[-\s]+", "-", text) or "team"
@@ -25,19 +49,21 @@ def slugify(name: str) -> str:
 
 @dataclass
 class GameLogEntry:
+    """One row of a team's game log, as shown on their page."""
+
     week: int
-    week_label: str
+    week_label: str          # "Week 7" or "Postseason"
     date: str
     opponent: str
-    opponent_slug: str | None
-    location: str  # "vs", "at", or "n" for neutral site
+    opponent_slug: str | None  # None for pooled FCS teams, which have no page
+    location: str            # "vs" = home, "at" = away, "n" = neutral site
     won: bool
     tied: bool
     points_for: int
     points_against: int
-    rating_change: float
-    win_probability: float
-    opponent_rating: float
+    rating_change: float     # Elo gained or lost in THIS game
+    win_probability: float   # what we gave them before kickoff
+    opponent_rating: float   # the opponent's final rating, for context
     upset: bool
 
     @property
@@ -107,7 +133,15 @@ class TeamRanking:
 
     @property
     def rank_change(self) -> int | None:
-        """Positive means the team moved up the board."""
+        """How many places the team moved. Positive means UP the board.
+
+        Subtracting this way round looks backwards but isn't: going from 12th
+        to 5th is an improvement, and 12 - 5 = +7. Lower rank numbers are
+        better, so the previous rank has to come first.
+
+        Returns None when there's nothing to compare against - the very first
+        rating of a season, before any movement exists.
+        """
         if self.previous_rank is None:
             return None
         return self.previous_rank - self.rank
@@ -208,9 +242,26 @@ def build_rankings(
     teams: dict[str, Team],
     config: Config,
 ) -> RankingTable:
+    """Assemble everything the website and the CLI display.
+
+    Reads the finished model and builds one TeamRanking per FBS team, in six
+    passes over the data:
+
+        1. create a row for every FBS team, with its final rating
+        2. attach each team's weekly rating history, for the chart
+        3. walk every game to build records and game logs
+        4. average up strength of schedule, find best win / worst loss
+        5. sort by rating to assign ranks, and compare to last week
+        6. project the upcoming week's games
+
+    Nothing here changes a rating - it only reads and reorganizes.
+    """
     season = config.season
     final = model.ratings
 
+    # --- Pass 1: one row per FBS team ---
+    # Note this uses the CURRENT season's FBS list, so a team that moved up
+    # from FCS this year appears, and one that dropped out doesn't.
     entries: dict[str, TeamRanking] = {}
     for school, meta in teams.items():
         entries[school] = TeamRanking(
@@ -238,7 +289,10 @@ def build_rankings(
         else:
             entry.preseason_rating = config.elo.initial_rating
 
-    # --- game logs
+    # --- Pass 3: game logs and records ---
+    # Each game appears once in the model but needs to show up on TWO team
+    # pages - once from the home team's point of view, once from the away
+    # team's - which is what the `for is_home in (True, False)` loop below does.
     season_results = [r for r in model.results if r.game.season == season]
     opponent_ratings: dict[str, list[float]] = {s: [] for s in entries}
 
@@ -299,7 +353,12 @@ def build_rankings(
 
             opponent_ratings[school].append(opp_rating)
 
-    # --- strength of schedule: mean final rating of everyone you played
+    # --- Strength of schedule ---
+    # The average FINAL rating of every opponent a team played. Using final
+    # ratings rather than the ratings at the time means SOS keeps moving all
+    # season: beat a team in September that turns out to be excellent, and your
+    # schedule retroactively gets stronger. That's the honest way to do it, but
+    # it does mean this number changes even in a week your team didn't play.
     for school, entry in entries.items():
         faced = opponent_ratings[school]
         entry.sos = sum(faced) / len(faced) if faced else config.elo.initial_rating
@@ -311,13 +370,22 @@ def build_rankings(
             min(losses, key=lambda g: g.opponent_rating) if losses else None
         )
 
+    # --- The actual ranking ---
+    # Sort by rating, highest first (the minus sign reverses the order), then
+    # number them 1, 2, 3... That's the whole ranking. No tiebreakers, no
+    # committee, no adjustments.
     ranked = sorted(entries.values(), key=lambda t: -t.rating)
     for i, entry in enumerate(ranked, start=1):
         entry.rank = i
+    # Same again, but ordered by strength of schedule, to get an SOS rank.
     for i, entry in enumerate(sorted(ranked, key=lambda t: -t.sos), start=1):
         entry.sos_rank = i
 
-    # --- last week's ranks, for the movement arrows
+    # --- Last week's ranks, for the movement arrows ---
+    # Re-rank every team using the SECOND-TO-LAST snapshot, then compare. The
+    # [-2] is "the week before the most recent one". In week 1 that snapshot is
+    # the preseason, which is why the site labels the movement "since preseason"
+    # rather than implying it's week-over-week.
     previous_label: str | None = None
     if len(season_snaps) >= 2:
         previous_label = season_snaps[-2].label
@@ -328,7 +396,9 @@ def build_rankings(
         for i, school in enumerate(prev_order, start=1):
             entries[school].previous_rank = i
 
-    # --- projections for the next slate of unplayed games
+    # --- Projections for the next slate of unplayed games ---
+    # Find the earliest week that still has unplayed games, then predict every
+    # game in it. This is the only forward-looking part of the whole program.
     upcoming = [g for g in games if g.season == season and not g.completed]
     projections: list[Projection] = []
     projection_week: str | None = None

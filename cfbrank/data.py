@@ -1,8 +1,25 @@
-"""Client for the CollegeFootballData API, with an on-disk cache.
+"""WHERE THE GAME RESULTS COME FROM.
 
-Raw API responses are cached under data/raw/ as JSON. Completed past seasons are
-cached forever; the current season is re-fetched when it goes stale so the daily
-job always sees Saturday's results.
+This file downloads college football schedules and scores from
+CollegeFootballData.com (a free public API) and hands them to the rest of the
+program in a tidy, predictable shape. Nothing here does any rating math.
+
+Three jobs, in order of how much code they take up:
+
+1. ASKING FOR DATA. Send an HTTP request with your API key attached, and be
+   patient about it - the API is occasionally slow or briefly broken, so
+   requests are retried with escalating waits rather than failing on the first
+   hiccup.
+
+2. REMEMBERING IT. Every response is saved to data/raw/ as a JSON file. A
+   finished season never changes, so once 2019 is on disk it's never fetched
+   again. Only the current season is re-downloaded, and only if the saved copy
+   is more than six hours old. This is why the first run takes a minute and
+   every run after it takes seconds.
+
+3. TIDYING IT UP. The API's raw output becomes simple Game and Team records,
+   defined at the bottom of this file, so no other part of the program has to
+   know anything about JSON or HTTP.
 """
 
 from __future__ import annotations
@@ -44,10 +61,16 @@ class CFBDError(RuntimeError):
 
 
 def _pick(row: dict[str, Any], *keys: str, default: Any = None) -> Any:
-    """Read the first key present.
+    """Read whichever of several possible field names actually exists.
 
-    The CFBD API has shipped both snake_case and camelCase field names across
-    versions, so every read goes through here rather than betting on one.
+    The API has changed how it spells its fields over the years - the home
+    team's score has been both "homePoints" and "home_points" - so instead of
+    betting on one spelling, every read asks for all the ones we've seen:
+
+        _pick(row, "homePoints", "home_points")
+
+    It returns the first one present. This is why the program keeps working
+    when the API changes underneath it.
     """
     for key in keys:
         if key in row and row[key] is not None:
@@ -57,7 +80,12 @@ def _pick(row: dict[str, Any], *keys: str, default: Any = None) -> Any:
 
 @dataclass(frozen=True)
 class Game:
-    """One scheduled or completed game, normalized."""
+    """One game - either already played, or still on the schedule.
+
+    "frozen" means these can't be changed after they're created, which is a
+    deliberate safety net: game results are facts, and a bug that quietly
+    rewrote a score would be very hard to notice in the final rankings.
+    """
 
     id: int
     season: int
@@ -79,13 +107,19 @@ class Game:
 
     @property
     def sort_key(self) -> tuple:
-        # Postseason always follows the regular season regardless of week number,
-        # which restarts at 1 for bowls.
+        """Used to put games in the order they were actually played.
+
+        The subtlety: bowl games are labelled week 1, 2, 3 of the postseason,
+        so sorting by week number alone would file the national championship
+        before September. The `phase` value forces all postseason games after
+        all regular season ones, no matter what week they claim to be.
+        """
         phase = 0 if self.season_type == "regular" else 1
         return (self.season, phase, self.week, self.start_date or "", self.id)
 
     @property
     def margin(self) -> int | None:
+        """Home score minus away score. Negative means the home team lost."""
         if self.home_points is None or self.away_points is None:
             return None
         return self.home_points - self.away_points
