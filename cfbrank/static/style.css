@@ -1,0 +1,387 @@
+/* --------------------------------------------------------------- tokens */
+:root {
+  color-scheme: light;
+  --surface-0: #f7f6f3;
+  --surface-1: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #e0dfd9;
+  --border-strong: #c9c8c1;
+  --text-primary: #14140f;
+  --text-secondary: #52514e;
+  --text-muted: #83827c;
+  --accent: #2a78d6;
+  --accent-soft: rgba(42, 120, 214, 0.12);
+  --good: #008300;
+  --bad: #e34948;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgba(20, 20, 15, 0.05), 0 4px 14px rgba(20, 20, 15, 0.04);
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #131312;
+    --surface-1: #1a1a19;
+    --surface-2: #232322;
+    --border: #333331;
+    --border-strong: #4a4a47;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8d8c84;
+    --accent: #3987e5;
+    --accent-soft: rgba(57, 135, 229, 0.18);
+    --good: #4caf50;
+    --bad: #e66767;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.25);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #131312;
+  --surface-1: #1a1a19;
+  --surface-2: #232322;
+  --border: #333331;
+  --border-strong: #4a4a47;
+  --text-primary: #ffffff;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8d8c84;
+  --accent: #3987e5;
+  --accent-soft: rgba(57, 135, 229, 0.18);
+  --good: #4caf50;
+  --bad: #e66767;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+/* ---------------------------------------------------------------- base */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.015em; }
+h1 { font-size: 2rem; margin: 0 0 8px; }
+h2 { font-size: 1.05rem; margin: 0 0 12px; }
+
+.muted { color: var(--text-muted); }
+.strong { font-weight: 650; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.up { color: var(--good); font-weight: 600; }
+.down { color: var(--bad); font-weight: 600; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ------------------------------------------------------------ masthead */
+.masthead {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+  position: sticky; top: 0; z-index: 20;
+}
+.masthead-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; min-height: 60px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+.brand:hover { text-decoration: none; }
+.brand strong { display: block; font-size: 0.98rem; }
+.brand small { color: var(--text-muted); font-size: 0.8rem; }
+.brand-mark {
+  width: 12px; height: 20px; border-radius: 6px / 10px;
+  background: var(--accent); flex: none;
+}
+.nav { display: flex; align-items: center; gap: 16px; font-size: 0.88rem; }
+.nav a { color: var(--text-secondary); }
+.nav a:hover { color: var(--accent); }
+.theme-toggle {
+  border: 1px solid var(--border-strong); background: var(--surface-2);
+  color: var(--text-secondary); border-radius: 999px; padding: 4px 12px;
+  font: inherit; font-size: 0.82rem; cursor: pointer;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------------------------------------------------------------- hero */
+.hero { padding: 40px 0 24px; }
+.lede { color: var(--text-secondary); font-size: 1.02rem; margin: 0 0 20px; max-width: 62ch; }
+
+.stat-row { display: flex; gap: 12px; flex-wrap: wrap; }
+.stat {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 14px 18px; min-width: 150px; flex: 1 1 150px;
+}
+.stat-value { display: block; font-size: 1.6rem; font-weight: 660; letter-spacing: -0.02em; }
+.stat-label { display: block; color: var(--text-muted); font-size: 0.8rem; margin-top: 2px; }
+
+/* --------------------------------------------------------------- cards */
+/* align-items: start so a card with fewer rows keeps its natural height
+   instead of stretching over dead space to match its tallest sibling. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+  gap: 12px;
+  margin: 28px 0;
+}
+.cards.two { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.card, .panel {
+  background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow);
+}
+.panel { margin: 28px 0; }
+/* Every row in every card shares one grid: name on the left, the number
+   right-aligned, supporting detail on a second line. Uniform shape is what
+   keeps three different lists from reading as three different designs. */
+.mover-list { list-style: none; margin: 0; padding: 0; }
+.mover-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  column-gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border);
+}
+.mover-list li:first-child { border-top: 0; padding-top: 2px; }
+.mover-list li:last-child { padding-bottom: 2px; }
+
+.mv-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mv-name:hover { color: var(--accent); text-decoration: none; }
+.mv-value {
+  font-size: 0.86rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  justify-self: end;
+}
+.mv-value.odds { color: var(--text-secondary); font-weight: 600; }
+.mv-sub {
+  grid-column: 1 / -1;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.card-head h2 { margin: 0; }
+.card-sub {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.card-empty { font-size: 0.88rem; margin: 0; }
+.chip {
+  display: inline-block; background: var(--surface-2); color: var(--text-secondary);
+  border-radius: 999px; padding: 1px 8px; font-size: 0.74rem; white-space: nowrap;
+}
+.chip.upset { background: var(--accent-soft); color: var(--accent); }
+.resume { margin: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+
+/* -------------------------------------------------------------- tables */
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin: 32px 0 12px;
+}
+.section-head h2 { margin: 0; font-size: 1.25rem; }
+.controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.controls input, .controls select {
+  font: inherit; font-size: 0.88rem; padding: 6px 10px;
+  border: 1px solid var(--border-strong); border-radius: 8px;
+  background: var(--surface-1); color: var(--text-primary); min-width: 160px;
+}
+.controls input:focus, .controls select:focus {
+  outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+}
+
+/* Deliberately NOT a scroll container at desktop widths: an overflow container
+   becomes the sticky header's scrollport, which pushes the header down by its
+   own `top` offset instead of pinning it to the page. */
+.table-scroll { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-1); }
+table.rankings { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+table.rankings th, table.rankings td { padding: 9px 12px; text-align: left; white-space: nowrap; }
+table.rankings thead th {
+  position: sticky; top: 60px; background: var(--surface-2);
+  color: var(--text-secondary); font-weight: 600; font-size: 0.78rem;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--border); cursor: pointer; user-select: none;
+}
+table.rankings.compact thead th { position: static; cursor: default; }
+table.rankings thead th.num, table.rankings td.num { text-align: right; }
+table.rankings thead th[aria-sort]::after { content: " \25B4"; color: var(--accent); }
+table.rankings thead th[aria-sort="descending"]::after { content: " \25BE"; }
+table.rankings tbody tr { border-top: 1px solid var(--border); }
+table.rankings tbody tr:hover { background: var(--surface-2); }
+td.rank { color: var(--text-muted); width: 48px; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------- AP-poll style rankings */
+table.poll { width: 100%; border-collapse: collapse; font-size: 0.94rem; }
+table.poll thead th {
+  position: sticky; top: 60px; z-index: 2;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-weight: 600; font-size: 0.72rem;
+  text-transform: uppercase; letter-spacing: 0.07em;
+  text-align: left; padding: 10px 14px; white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none;
+}
+table.poll thead th.num, table.poll td.num { text-align: right; }
+table.poll thead th.col-week { cursor: default; }
+table.poll thead th[aria-sort]::after { content: " \25B4"; color: var(--accent); }
+table.poll thead th[aria-sort="descending"]::after { content: " \25BE"; }
+table.poll tbody tr { border-bottom: 1px solid var(--border); }
+table.poll tbody tr:hover { background: var(--surface-2); }
+table.poll td { padding: 8px 14px; vertical-align: middle; }
+
+.col-rank { width: 68px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.col-rank .rk { font-weight: 700; font-size: 1rem; }
+.col-rank .mv { font-size: 0.7rem; margin-left: 5px; font-weight: 600; }
+.col-rank .mv.flat { color: var(--text-muted); font-weight: 400; }
+.col-rank .mv.up { color: var(--good); }
+.col-rank .mv.down { color: var(--bad); }
+
+.col-team { min-width: 240px; }
+.team-line { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.logo { width: 26px; height: 26px; object-fit: contain; flex: none; }
+.logo-fallback {
+  width: 4px; height: 20px; border-radius: 2px;
+  background: var(--swatch); margin: 0 11px 0 0;
+}
+.team-name { font-weight: 650; color: var(--text-primary); }
+.team-name:hover { color: var(--accent); }
+.team-record { font-size: 0.82rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.team-meta {
+  display: block; font-size: 0.76rem; color: var(--text-muted);
+  margin: 1px 0 0 35px;
+}
+
+.col-week { color: var(--text-secondary); white-space: nowrap; min-width: 190px; }
+.col-week .wk-loc { color: var(--text-muted); margin-right: 3px; }
+.col-week .wk-odds {
+  margin-left: 8px; font-size: 0.78rem; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.col-week .wk-score { font-variant-numeric: tabular-nums; margin-left: 2px; }
+.col-week .wk-opp { color: var(--text-muted); margin-left: 6px; font-size: 0.85rem; }
+
+.col-sos { white-space: nowrap; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.col-sos .sos-rank { color: var(--text-muted); font-size: 0.76rem; margin-left: 5px; }
+
+.col-pts { white-space: nowrap; }
+.col-pts .pts { font-weight: 700; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.col-pts .pts-delta { font-size: 0.76rem; margin-left: 5px; font-variant-numeric: tabular-nums; }
+
+.table-note { font-size: 0.8rem; margin-top: 10px; }
+
+.loc { display: inline-block; width: 18px; font-size: 0.8rem; }
+.result { font-weight: 700; display: inline-block; width: 14px; }
+.result.win { color: var(--good); }
+.result.loss { color: var(--bad); }
+.result.tie { color: var(--text-muted); }
+.empty-msg { margin-top: 12px; }
+
+/* --------------------------------------------------------------- team */
+.crumbs { padding: 20px 0 0; font-size: 0.88rem; }
+.team-head { display: flex; align-items: center; gap: 16px; padding: 20px 0 24px; }
+.team-logo { object-fit: contain; }
+.stat-row.wide .stat { min-width: 190px; }
+
+/* -------------------------------------------------------------- chart */
+.chart-figure { margin: 0; position: relative; }
+.rating-chart { width: 100%; height: auto; display: block; overflow: visible; }
+.rating-chart .grid { stroke: var(--border); stroke-width: 1; }
+.rating-chart .baseline { stroke: var(--border-strong); stroke-width: 1; stroke-dasharray: 3 4; }
+.rating-chart .axis-label, .rating-chart .axis-note {
+  fill: var(--text-muted); font-size: 11px; font-family: var(--mono);
+}
+/* Halo the baseline caption so it stays readable over the area fill. */
+.rating-chart .axis-note {
+  paint-order: stroke; stroke: var(--surface-1); stroke-width: 3px;
+  stroke-linejoin: round;
+}
+.rating-chart .series-line {
+  fill: none; stroke: var(--accent); stroke-width: 2;
+  stroke-linejoin: round; stroke-linecap: round;
+}
+.rating-chart .series-area { fill: var(--accent-soft); stroke: none; }
+.rating-chart .series-dot { fill: var(--accent); stroke: var(--surface-1); stroke-width: 2; opacity: 0; }
+.rating-chart .series-dot.is-last, .rating-chart .series-dot.is-active { opacity: 1; }
+.rating-chart .crosshair { stroke: var(--border-strong); stroke-width: 1; }
+.chart-tooltip {
+  position: absolute; pointer-events: none; transform: translate(-50%, -130%);
+  background: var(--surface-1); border: 1px solid var(--border-strong);
+  border-radius: 8px; padding: 6px 10px; font-size: 0.8rem;
+  box-shadow: var(--shadow); white-space: nowrap; z-index: 5;
+}
+.chart-tooltip strong { display: block; font-variant-numeric: tabular-nums; }
+figcaption { margin-top: 10px; font-size: 0.82rem; }
+
+/* --------------------------------------------------------------- prose */
+.prose { max-width: 68ch; padding: 32px 0; }
+.prose h2 { font-size: 1.2rem; margin: 28px 0 10px; }
+.prose ul { padding-left: 20px; }
+.prose li { margin-bottom: 10px; color: var(--text-secondary); }
+.prose li strong { color: var(--text-primary); }
+.prose p { color: var(--text-secondary); }
+.prose code {
+  font-family: var(--mono); font-size: 0.86em; background: var(--surface-2);
+  padding: 1px 5px; border-radius: 4px; color: var(--text-primary);
+}
+.prose table.rankings { border: 1px solid var(--border); border-radius: var(--radius); }
+
+/* -------------------------------------------------------------- footer */
+.footer {
+  margin-top: 48px; padding: 24px 0 40px;
+  border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.84rem;
+}
+.footer p { margin: 4px 0; }
+
+@media (max-width: 900px) {
+  /* Narrow screens need horizontal scrolling more than they need a pinned
+     header, so the trade flips here. */
+  .table-scroll { overflow-x: auto; }
+  table.rankings thead th, table.poll thead th { position: static; }
+}
+
+@media (max-width: 720px) {
+  /* Drop the two supporting columns before the layout gets cramped; rank,
+     team and rating are what the page is for. */
+  .col-week, .col-sos { display: none; }
+  .col-team { min-width: 0; }
+}
+
+@media (max-width: 620px) {
+  h1 { font-size: 1.55rem; }
+  .hero { padding-top: 28px; }
+}

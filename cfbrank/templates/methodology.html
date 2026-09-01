@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}How it works &middot; {{ site.title }}{% endblock %}
+{% block content %}
+
+<article class="prose">
+  <h1>How these rankings work</h1>
+
+  <p class="lede">
+    Every team carries one number. Beat someone better than you and it goes up;
+    lose to someone worse and it goes down. No polls, no preseason expectations,
+    no recruiting rankings, no eye test &mdash; only results.
+  </p>
+
+  <h2>The mechanics</h2>
+  <p>
+    Before kickoff, the gap between two ratings implies a win probability. A
+    400-point edge means 10-to-1 odds. Afterward, the winner takes points from the
+    loser: a lot when the result was a surprise, very little when it was expected.
+    Ratings are zero-sum, so the pool of rating in the sport never inflates.
+  </p>
+
+  <p>Two adjustments sit on top of textbook Elo:</p>
+  <ul>
+    <li>
+      <strong>Margin of victory.</strong> The swing is scaled by
+      <code>log(margin + 1)</code>. A 28-point win counts for more than a
+      last-second field goal, but with sharply diminishing returns &mdash; the
+      difference between winning by 35 and winning by 49 is small.
+    </li>
+    <li>
+      <strong>Favorite damping.</strong> That multiplier is shrunk when a heavy
+      favorite wins. Without it, good teams inflate their ratings by running up the
+      score on bad ones, and the whole scale drifts apart.
+    </li>
+  </ul>
+
+  <h2>The settings</h2>
+  <table class="rankings compact">
+    <tbody>
+      <tr><td><strong>K-factor</strong></td><td class="num">{{ config.elo.k }}</td>
+        <td class="muted">How far one game can move a rating</td></tr>
+      <tr><td><strong>Home field</strong></td><td class="num">{{ config.elo.home_field }}</td>
+        <td class="muted">Elo points, worth roughly {{ '%.1f'|format(config.elo.home_field / 25) }} points of spread</td></tr>
+      <tr><td><strong>Preseason carry-over</strong></td><td class="num">{{ config.elo.preseason_regression }}</td>
+        <td class="muted">Fraction of last year's rating a team keeps</td></tr>
+      <tr><td><strong>Starting rating</strong></td><td class="num">{{ config.elo.initial_rating|int }}</td>
+        <td class="muted">Where a brand-new team begins</td></tr>
+      <tr><td><strong>Pooled FCS rating</strong></td><td class="num">{{ config.elo.fcs_rating|int }}</td>
+        <td class="muted">Every non-FBS opponent, treated as one fixed team</td></tr>
+      <tr><td><strong>History from</strong></td><td class="num">{{ config.history_start }}</td>
+        <td class="muted">First season used to seed carry-over ratings</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Things worth knowing</h2>
+  <ul>
+    <li>
+      <strong>Non-FBS opponents are pooled.</strong> Every FCS team is treated as a
+      single fixed-strength opponent, so scheduling a cupcake can cost you rating
+      but can't earn you much.
+    </li>
+    <li>
+      <strong>Ratings carry over between seasons</strong>, pulled
+      {{ '%.0f'|format((1 - config.elo.preseason_regression) * 100) }}% of the way back
+      toward average. Rosters turn over, so last year is evidence, not gospel.
+    </li>
+    <li>
+      <strong>Elo is backward-looking by construction.</strong> It measures what a
+      team has done, not what it would do on a neutral field tomorrow &mdash; though
+      the projections page uses it that way anyway, which is the honest use of it.
+    </li>
+    <li>
+      <strong>Early season ratings are noisy.</strong> Through three or four games,
+      most of a rating is still last year's number.
+    </li>
+    <li>
+      <strong>Strength of schedule</strong> here is the mean final Elo of every
+      opponent a team faced, so it moves all year as those opponents play.
+    </li>
+  </ul>
+
+  <h2>Reproducing it</h2>
+  <p>
+    Every number on this site comes out of a rerunnable script: game results in,
+    ratings out, no manual steps. The full ranking is published as
+    <a href="{{ rel }}data/rankings.csv">CSV</a> and
+    <a href="{{ rel }}data/rankings.json">JSON</a> alongside the page.
+    Change a setting in <code>config.yaml</code>, rerun, and you get a different
+    &mdash; equally defensible &mdash; set of rankings.
+  </p>
+</article>
+
+{% endblock %}

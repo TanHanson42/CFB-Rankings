@@ -1,0 +1,42 @@
+# Configuration for the Elo college football ranking system.
+# Everything the model does is driven from this file - tweak, re-run, compare.
+
+# Season to rank. "auto" picks the current season (Aug-Jan rolls into the prior year).
+season: auto
+
+# First season used to build up carry-over ratings. Earlier start = better-seeded
+# preseason ratings, but a slower first run (one API call per season, then cached).
+history_start: 2015
+
+elo:
+  # Every team starts here the very first time it appears.
+  initial_rating: 1500
+
+  # Non-FBS (FCS/D2) opponents are pooled into a single fixed-strength opponent.
+  # 1000 puts an average FBS home team at ~96% to win, which is about what
+  # actually happens. Setting this too high makes cupcake games pay too well.
+  fcs_rating: 1000
+
+  # If true, that pooled FCS rating never moves. Prevents FBS teams from farming
+  # rating off a punching bag that gets weaker every week.
+  freeze_fcs: true
+
+  # Base K-factor: how far a single result can move a rating.
+  # Lower = stickier/slower, higher = more reactive to last Saturday.
+  k: 45
+
+  # Home field advantage, in Elo points. ~62 is roughly a 2.6-point spread.
+  home_field: 62
+
+  # Scale a result by margin of victory (with diminishing returns, and damped
+  # for favorites so blowouts vs. bad teams don't run up the score).
+  margin_of_victory: true
+
+  # Between seasons, pull each rating this fraction of the way back from the mean.
+  # 1.0 = full carry-over, 0.0 = everyone resets to 1500 each year.
+  preseason_regression: 0.75
+
+site:
+  title: "Elo Rankings"
+  subtitle: "A margin-adjusted Elo rating for every FBS team, rebuilt daily."
+  author: "Tanner"

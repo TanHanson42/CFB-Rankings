@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ site.title }}{% endblock %}</title>
+<meta name="description" content="{{ site.subtitle }}">
+<link rel="stylesheet" href="{{ rel }}assets/style.css">
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <a class="brand" href="{{ rel }}index.html">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <strong>{{ site.title }}</strong>
+        <small>{{ table.season }} season</small>
+      </span>
+    </a>
+    <nav class="nav">
+      <a href="{{ rel }}index.html">Rankings</a>
+      <a href="{{ rel }}methodology.html">How it works</a>
+      <a href="{{ rel }}data/rankings.csv">CSV</a>
+      <a href="{{ rel }}data/rankings.json">JSON</a>
+      <button type="button" class="theme-toggle" data-theme-toggle aria-label="Switch color theme">
+        <span data-theme-label>Dark</span>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+{% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p>
+      Updated {{ table.generated_at }} &middot; through {{ table.through }} &middot;
+      {{ table.games_rated }} games rated.
+    </p>
+    <p class="muted">
+      Ratings computed from game results only. Data from
+      <a href="https://collegefootballdata.com">CollegeFootballData.com</a>.
+      {% if site.author %}Built by {{ site.author }}.{% endif %}
+    </p>
+  </div>
+</footer>
+
+<script src="{{ rel }}assets/app.js"></script>
+</body>
+</html>

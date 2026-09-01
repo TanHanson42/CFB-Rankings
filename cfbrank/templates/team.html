@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Team &middot; {{ site.title }}{% endblock %}
+{% block content %}
+
+{# A single shell for all 138 teams. app.js reads ?t=<slug> and fills this in
+   from data/teams.json, which keeps the published site under ten files instead
+   of one HTML page per team. #}
+
+<nav class="crumbs"><a href="{{ rel }}index.html">&larr; All rankings</a></nav>
+
+<div id="team-page" data-teams-url="{{ rel }}data/teams.json" hidden>
+  <section class="team-head">
+    <img class="team-logo" data-team-logo src="" alt="" width="72" height="72" hidden>
+    <div>
+      <h1 data-team-name></h1>
+      <p class="lede" data-team-meta></p>
+    </div>
+  </section>
+
+  <section class="stat-row wide">
+    <div class="stat">
+      <span class="stat-value" data-team-rank></span>
+      <span class="stat-label">Elo rank <span data-team-rank-move></span></span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" data-team-rating></span>
+      <span class="stat-label" data-team-rating-label></span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" data-team-sos-rank></span>
+      <span class="stat-label" data-team-sos-label></span>
+    </div>
+  </section>
+
+  <section class="panel" data-chart-panel hidden>
+    <h2>Rating through the season</h2>
+    <figure class="chart-figure viz-root">
+      <svg class="rating-chart" data-chart role="img" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="chart-tooltip" hidden></div>
+      <figcaption class="muted" data-chart-caption></figcaption>
+    </figure>
+  </section>
+
+  <section class="cards two">
+    <div class="card">
+      <h2>Best win</h2>
+      <div data-best-win></div>
+    </div>
+    <div class="card">
+      <h2>Worst loss</h2>
+      <div data-worst-loss></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Game log</h2>
+    <div class="table-scroll" data-gamelog-wrap>
+      <table class="rankings compact">
+        <thead>
+          <tr>
+            <th>Week</th><th>Opponent</th><th>Result</th>
+            <th class="num" title="Elo win probability before kickoff">Pregame odds</th>
+            <th class="num" title="Elo points gained or lost">Elo &Delta;</th>
+          </tr>
+        </thead>
+        <tbody data-gamelog></tbody>
+      </table>
+    </div>
+    <p class="muted" data-gamelog-empty hidden>No games played yet this season.</p>
+  </section>
+</div>
+
+<div id="team-loading" class="panel">
+  <p class="muted">Loading team&hellip;</p>
+</div>
+
+<div id="team-missing" class="panel" hidden>
+  <h2>Team not found</h2>
+  <p class="muted">
+    That team isn&rsquo;t in the {{ table.season }} FBS rankings.
+    <a href="{{ rel }}index.html">Back to the full list</a>.
+  </p>
+</div>
+
+<noscript>
+  <div class="panel">
+    <h2>Team pages need JavaScript</h2>
+    <p class="muted">
+      Every team's ratings and results are in
+      <a href="{{ rel }}data/rankings.csv">rankings.csv</a> and
+      <a href="{{ rel }}data/teams.json">teams.json</a>, and the
+      <a href="{{ rel }}index.html">full rankings table</a> works without scripts.
+    </p>
+  </div>
+</noscript>
+
+{% endblock %}

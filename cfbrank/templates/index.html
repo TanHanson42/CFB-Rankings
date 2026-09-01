@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero">
+  <h1>{{ site.title }}</h1>
+  <p class="lede">{{ site.subtitle }}</p>
+  <div class="stat-row">
+    <div class="stat">
+      <span class="stat-value">{{ table.teams|length }}</span>
+      <span class="stat-label">FBS teams rated</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">{{ table.games_rated }}</span>
+      <span class="stat-label">Games this season</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value">{{ table.through }}</span>
+      <span class="stat-label">Ratings through</span>
+    </div>
+  </div>
+</section>
+
+{% if table.risers or table.fallers or table.biggest_upsets %}
+<section class="cards">
+  <div class="card">
+    <div class="card-head">
+      <h2>Biggest risers</h2>
+      {% if table.previous_label %}<span class="card-sub">since {{ table.previous_label|lower }}</span>{% endif %}
+    </div>
+    {% if table.risers %}
+    <ul class="mover-list">
+      {% for t in table.risers %}
+      <li>
+        <a class="mv-name" href="{{ rel }}team.html?t={{ t.slug }}">{{ t.school }}</a>
+        <span class="mv-value up">&#9650;&thinsp;{{ t.rank_change }}</span>
+        <span class="mv-sub">now #{{ t.rank }} &middot; {{ t.record }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted card-empty">Nothing has moved yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Biggest fallers</h2>
+      {% if table.previous_label %}<span class="card-sub">since {{ table.previous_label|lower }}</span>{% endif %}
+    </div>
+    {% if table.fallers %}
+    <ul class="mover-list">
+      {% for t in table.fallers %}
+      <li>
+        <a class="mv-name" href="{{ rel }}team.html?t={{ t.slug }}">{{ t.school }}</a>
+        <span class="mv-value down">&#9660;&thinsp;{{ -t.rank_change }}</span>
+        <span class="mv-sub">now #{{ t.rank }} &middot; {{ t.record }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted card-empty">Nothing has moved yet.</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <h2>Least likely results</h2>
+      <span class="card-sub">this season</span>
+    </div>
+    {% if table.biggest_upsets %}
+    <ul class="mover-list">
+      {% for u in table.biggest_upsets %}
+      <li>
+        <a class="mv-name" href="{{ rel }}team.html?t={{ u.winner_slug }}">{{ u.winner }}</a>
+        <span class="mv-value odds">{{ u.probability|pct }}</span>
+        <span class="mv-sub">beat {{ u.loser }} {{ u.score }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="muted card-empty">No upsets recorded yet.</p>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+
+<section id="rankings">
+  <div class="section-head">
+    <h2>Full rankings</h2>
+    <div class="controls">
+      <label class="sr-only" for="team-search">Search teams</label>
+      <input id="team-search" type="search" placeholder="Search teams&hellip;" autocomplete="off">
+      <label class="sr-only" for="conf-filter">Filter by conference</label>
+      <select id="conf-filter">
+        <option value="">All conferences</option>
+        {% for conf in table.conferences %}
+        <option value="{{ conf }}">{{ conf }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table class="poll" id="rankings-table">
+      <thead>
+        <tr>
+          <th class="col-rank" data-sort="num" data-default="asc" aria-sort="ascending">#</th>
+          <th class="col-team" data-sort="text">Team</th>
+          <th class="col-week">This week</th>
+          <th class="col-sos num" data-sort="num" data-default="desc" title="Average Elo of opponents faced">SOS</th>
+          <th class="col-pts num" data-sort="num" data-default="desc" title="Elo rating, with the change since preseason">Elo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in table.teams %}
+        <tr data-conference="{{ t.conference }}" data-team="{{ t.school|lower }}">
+          <td class="col-rank" data-value="{{ t.rank }}">
+            <span class="rk">{{ t.rank }}</span>
+            {% if t.rank_change is none or t.rank_change == 0 %}
+              <span class="mv flat">&ndash;</span>
+            {% elif t.rank_change > 0 %}
+              <span class="mv up">&#9650;{{ t.rank_change }}</span>
+            {% else %}
+              <span class="mv down">&#9660;{{ -t.rank_change }}</span>
+            {% endif %}
+          </td>
+
+          <td class="col-team">
+            <span class="team-line">
+              {% if t.logo %}
+              <img class="logo" src="{{ t.logo }}" alt="" width="26" height="26" loading="lazy" decoding="async">
+              {% else %}
+              <span class="logo logo-fallback" style="--swatch: {{ t.color or '#8a8a86' }}" aria-hidden="true"></span>
+              {% endif %}
+              <a class="team-name" href="{{ rel }}team.html?t={{ t.slug }}">{{ t.school }}</a>
+              <span class="team-record">{{ t.record }}</span>
+            </span>
+            <span class="team-meta">{{ t.conference }}{% if t.conference_record != '0-0' %} &middot; {{ t.conference_record }} conf{% endif %}</span>
+          </td>
+
+          <td class="col-week">
+            {% if t.next_game %}
+              <span class="wk-loc">{{ t.next_game.prefix }}</span>
+              {% if t.next_game.opponent_slug %}
+                <a href="{{ rel }}team.html?t={{ t.next_game.opponent_slug }}">{{ t.next_game.opponent }}</a>
+              {% else %}
+                {{ t.next_game.opponent }}
+              {% endif %}
+              <span class="wk-odds">{{ t.next_game.win_probability|pct }}</span>
+            {% elif t.last_game %}
+              <span class="result {{ 'win' if t.last_game.won else ('tie' if t.last_game.tied else 'loss') }}">{{ t.last_game.result_letter }}</span>
+              <span class="wk-score">{{ t.last_game.score }}</span>
+              <span class="wk-opp">{{ t.last_game.prefix }} {{ t.last_game.opponent }}</span>
+            {% else %}
+              <span class="muted">&ndash;</span>
+            {% endif %}
+          </td>
+
+          <td class="col-sos num" data-value="{{ t.sos }}">
+            <span class="sos-val">{{ t.sos|rating }}</span>
+            <span class="sos-rank">#{{ t.sos_rank }}</span>
+          </td>
+
+          <td class="col-pts num" data-value="{{ t.rating }}">
+            <span class="pts">{{ t.rating|rating }}</span>
+            <span class="pts-delta {{ 'up' if t.rating_change > 0 else ('down' if t.rating_change < 0 else 'muted') }}">({{ t.rating_change|signed }})</span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="table-note muted">
+    Elo rating with the change since preseason in parentheses.
+    {% if table.projection_week %}&ldquo;This week&rdquo; shows {{ table.projection_week }}&rsquo;s opponent and this team&rsquo;s win probability.{% endif %}
+  </p>
+  <p class="muted empty-msg" hidden>No teams match that filter.</p>
+</section>
+
+{% if table.projections %}
+<section id="projections">
+  <div class="section-head">
+    <h2>{{ table.projection_week }} projections</h2>
+  </div>
+  <p class="muted">
+    Win probability implied by the current ratings, with home field included.
+    The spread is the Elo gap converted at 25 points of rating per point.
+  </p>
+  <div class="table-scroll">
+    <table class="rankings compact">
+      <thead>
+        <tr><th>Date</th><th>Matchup</th><th>Favorite</th><th class="num">Win prob.</th><th class="num">Spread</th></tr>
+      </thead>
+      <tbody>
+        {% for p in table.projections %}
+        <tr>
+          <td class="muted">{{ p.date }}</td>
+          <td>
+            {{ p.away }} {{ 'vs' if p.neutral else 'at' }} {{ p.home }}
+            {% if p.neutral %}<span class="chip">neutral</span>{% endif %}
+          </td>
+          <td class="strong">{{ p.favorite }}</td>
+          <td class="num">{{ p.favorite_probability|pct }}</td>
+          <td class="num">
+            {% if p.spread >= 0 %}{{ p.home }} by {{ '%.1f'|format(p.spread) }}
+            {% else %}{{ p.away }} by {{ '%.1f'|format(-p.spread) }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}
