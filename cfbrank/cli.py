@@ -1,4 +1,23 @@
-"""Command line entry point: ``python -m cfbrank <command>``."""
+"""THE COMMANDS YOU TYPE.
+
+Everything you can ask this program to do, run as:
+
+    python -m cfbrank check              is my API key working?
+    python -m cfbrank top -n 25          print the top 25 in the terminal
+    python -m cfbrank team "Ohio State"  one team's rating and game log
+    python -m cfbrank build              generate the website into docs/
+    python -m cfbrank compare            Elo vs the AP poll, week by week
+
+Options that apply to any command go before it (they affect how data is
+loaded), while options specific to one command go after it:
+
+    python -m cfbrank --season 2024 --refresh top -n 10
+                      \\_______ global _______/  \\_ command _/
+
+Each command is a cmd_* function below. They all start by calling load(),
+which does the same three things every time: read config.yaml, download or
+un-cache the games, and run them through the rating engine.
+"""
 
 from __future__ import annotations
 
@@ -24,7 +43,16 @@ log = logging.getLogger("cfbrank")
 
 
 def load(args: argparse.Namespace):
-    """Fetch data and run the model. Everything else builds on this."""
+    """Fetch the games and run the ratings. Every command starts here.
+
+    Three steps, in order:
+      1. read config.yaml (and let --season override the year)
+      2. download the games, or read them from data/raw/ if already cached
+      3. feed them all through the rating engine
+
+    Returns the pieces every command needs. The first run of the day does real
+    downloading; after that it's reading files off your disk and takes seconds.
+    """
     config = Config.load(args.config)
     if args.season:
         config.season = args.season

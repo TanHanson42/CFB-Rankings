@@ -1,4 +1,14 @@
-"""Loading and validating config.yaml."""
+"""THE SETTINGS FILE READER.
+
+Reads config.yaml - the one file you edit to change how the rankings work - and
+checks the values make sense before anything else runs.
+
+Every knob that affects the ratings lives in config.yaml rather than being
+buried in the code, so tuning the model is a one-line edit and a rerun rather
+than a programming task. This file's job is just to load those values and
+refuse obviously broken ones early, with a clear message, instead of letting
+them cause strange results twenty minutes into a run.
+"""
 
 from __future__ import annotations
 
@@ -25,15 +35,31 @@ def current_season(today: dt.date | None = None) -> int:
 
 @dataclass
 class EloConfig:
+    """The dials that control the rating math. Defaults match config.yaml."""
+
+    # Where a team starts the first time it ever appears.
     initial_rating: float = 1500.0
+    # The single rating shared by every non-FBS opponent. 1000 makes an average
+    # FBS home team about a 96% favorite, which is roughly what really happens.
     fcs_rating: float = 1000.0
+    # Hold that pooled rating still, so FBS teams can't grind it down all season.
     freeze_fcs: bool = True
+    # How far one game can move a rating. Higher = the board churns weekly.
     k: float = 45.0
+    # Home-field advantage in rating points (~2.5 points of spread).
     home_field: float = 62.0
+    # Whether the final score matters, or only who won.
     margin_of_victory: bool = True
+    # How much of last year a team keeps. 0.75 = a quarter is forgotten.
     preseason_regression: float = 0.75
 
     def validate(self) -> None:
+        """Catch nonsense settings now, with a readable error.
+
+        These bounds are deliberately generous - they're here to catch typos
+        (a K of 4500, a negative home field) rather than to enforce taste.
+        Plenty of unusual-but-valid settings pass.
+        """
         if not 0 < self.k <= 200:
             raise ValueError(f"elo.k must be in (0, 200]; got {self.k}")
         if not 0 <= self.home_field <= 300:
